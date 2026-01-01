@@ -8,39 +8,39 @@ spring:
     gateway:
       routes:
         - id: auth-service
-          uri: http://localhost:8081
+          uri: http://${AUTH_SERVICE_HOST:localhost}:8081
           predicates:
             - Path=/api/auth/**
         - id: user-management-service
-          uri: http://localhost:8082
+          uri: http://${USER_SERVICE_HOST:localhost}:8082
           predicates:
             - Path=/api/users/**
         - id: information-service-a
-          uri: http://localhost:8083
+          uri: http://${INFO_A_SERVICE_HOST:localhost}:8083
           predicates:
             - Path=/api/information/a/**
         - id: information-service-b
-          uri: http://localhost:8084
+          uri: http://${INFO_B_SERVICE_HOST:localhost}:8084
           predicates:
             - Path=/api/information/b/**
         - id: business-service-1
-          uri: http://localhost:8085
+          uri: http://${BUSINESS_1_SERVICE_HOST:localhost}:8085
           predicates:
             - Path=/api/business/service1/**
         - id: business-service-2
-          uri: http://localhost:8086
+          uri: http://${BUSINESS_2_SERVICE_HOST:localhost}:8086
           predicates:
             - Path=/api/business/service2/**
         - id: business-service-3
-          uri: http://localhost:8087
+          uri: http://${BUSINESS_3_SERVICE_HOST:localhost}:8087
           predicates:
             - Path=/api/business/service3/**
         - id: admin-portal-service
-          uri: http://localhost:8088
+          uri: http://${ADMIN_SERVICE_HOST:localhost}:8088
           predicates:
             - Path=/api/admin/**
         - id: public-web-service
-          uri: http://localhost:8089
+          uri: http://${PUBLIC_SERVICE_HOST:localhost}:8089
           predicates:
             - Path=/api/public/**
 

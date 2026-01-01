@@ -1,0 +1,229 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: whocloud-postgres
+    environment:
+      POSTGRES_USER: whocloud
+      POSTGRES_PASSWORD: whocloud123
+      POSTGRES_DB: whocloud
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U whocloud"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - whocloud-network
+
+  # Public Web Service (Port 8089) - No dependencies
+  public-web-service:
+    build:
+      context: .
+      dockerfile: public-web-service/Dockerfile
+    container_name: whocloud-public-web
+    ports:
+      - "8089:8089"
+    networks:
+      - whocloud-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8089/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Information Service A (Port 8083)
+  information-service-a:
+    build:
+      context: .
+      dockerfile: information-service-a/Dockerfile
+    container_name: whocloud-info-a
+    ports:
+      - "8083:8083"
+    networks:
+      - whocloud-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8083/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Information Service B (Port 8084)
+  information-service-b:
+    build:
+      context: .
+      dockerfile: information-service-b/Dockerfile
+    container_name: whocloud-info-b
+    ports:
+      - "8084:8084"
+    networks:
+      - whocloud-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8084/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Business Service 1 (Port 8085)
+  business-service-1:
+    build:
+      context: .
+      dockerfile: business-service-1/Dockerfile
+    container_name: whocloud-business-1
+    ports:
+      - "8085:8085"
+    networks:
+      - whocloud-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8085/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Business Service 2 (Port 8086)
+  business-service-2:
+    build:
+      context: .
+      dockerfile: business-service-2/Dockerfile
+    container_name: whocloud-business-2
+    ports:
+      - "8086:8086"
+    networks:
+      - whocloud-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8086/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Business Service 3 (Port 8087)
+  business-service-3:
+    build:
+      context: .
+      dockerfile: business-service-3/Dockerfile
+    container_name: whocloud-business-3
+    ports:
+      - "8087:8087"
+    networks:
+      - whocloud-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8087/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Admin Portal Service (Port 8088)
+  admin-portal-service:
+    build:
+      context: .
+      dockerfile: admin-portal-service/Dockerfile
+    container_name: whocloud-admin
+    ports:
+      - "8088:8088"
+    networks:
+      - whocloud-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8088/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Auth Service (Port 8081) - Depends on PostgreSQL
+  auth-service:
+    build:
+      context: .
+      dockerfile: auth-service/Dockerfile
+    container_name: whocloud-auth
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: authdb
+      DB_USER: whocloud
+      DB_PASSWORD: whocloud123
+      JWT_SECRET: your-secret-key-change-in-production-minimum-256-bits-required-for-hs256
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - whocloud-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # User Management Service (Port 8082) - Depends on PostgreSQL
+  user-management-service:
+    build:
+      context: .
+      dockerfile: user-management-service/Dockerfile
+    container_name: whocloud-user-mgmt
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: userdb
+      DB_USER: whocloud
+      DB_PASSWORD: whocloud123
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - whocloud-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # API Gateway (Port 8080) - Depends on all other services
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    container_name: whocloud-gateway
+    environment:
+      AUTH_SERVICE_HOST: auth-service
+      USER_SERVICE_HOST: user-management-service
+      INFO_A_SERVICE_HOST: information-service-a
+      INFO_B_SERVICE_HOST: information-service-b
+      BUSINESS_1_SERVICE_HOST: business-service-1
+      BUSINESS_2_SERVICE_HOST: business-service-2
+      BUSINESS_3_SERVICE_HOST: business-service-3
+      ADMIN_SERVICE_HOST: admin-portal-service
+      PUBLIC_SERVICE_HOST: public-web-service
+    ports:
+      - "8080:8080"
+    depends_on:
+      - auth-service
+      - user-management-service
+      - information-service-a
+      - information-service-b
+      - business-service-1
+      - business-service-2
+      - business-service-3
+      - admin-portal-service
+      - public-web-service
+    networks:
+      - whocloud-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  whocloud-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
