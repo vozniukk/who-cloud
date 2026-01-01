@@ -3,7 +3,7 @@ FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
 # Copy the pre-built jar
-COPY build/libs/api-gateway-1.0.0-SNAPSHOT.jar app.jar
+COPY api-gateway/build/libs/api-gateway-1.0.0-SNAPSHOT.jar app.jar
 
 # Expose port
 EXPOSE 8080
