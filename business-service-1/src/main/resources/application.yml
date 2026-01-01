@@ -1,0 +1,12 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: business-service-1
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
