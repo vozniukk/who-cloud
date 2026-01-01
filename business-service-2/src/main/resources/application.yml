@@ -5,6 +5,9 @@ spring:
   application:
     name: business-service-2
 
+jwt:
+  secret: ${JWT_SECRET:your-256-bit-secret-key-change-this-in-production}
+
 management:
   endpoints:
     web:
