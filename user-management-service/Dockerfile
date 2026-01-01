@@ -3,7 +3,7 @@ FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
 # Copy the pre-built jar
-COPY build/libs/*.jar app.jar
+COPY build/libs/user-management-service-1.0.0-SNAPSHOT.jar app.jar
 
 # Expose port
 EXPOSE 8082
