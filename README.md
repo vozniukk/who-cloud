@@ -15,7 +15,7 @@ A modern microservices architecture built with **Spring Boot 3.4.1**, **Java 21 
 
 ### Microservices
 - **API Gateway** (8080) - Spring Cloud Gateway routing all requests
-- **Auth Service** (8081) - JWT authentication + Google SSO (planned)
+- **Auth Service** (8081) - JWT authentication + Google OAuth2 ✅
 - **User Management Service** (8082) - User profiles and role management
 - **Information Service A** (8083) - Information management endpoint
 - **Information Service B** (8084) - Information management endpoint
@@ -25,11 +25,11 @@ A modern microservices architecture built with **Spring Boot 3.4.1**, **Java 21 
 - **Admin Portal Service** (8088) - Administrative dashboard
 - **Public Web Service** (8089) - Public-facing APIs
 
-### User Roles (Planned)
-- `USER` - Basic authenticated user
-- `MANAGER` - Manager level access
-- `ADMINISTRATOR` - Full administrative access
-- `OBSERVER` - Read-only observer access
+### User Roles & Access Control ✅
+- `GUEST` - Auto-registered OAuth2 users (read-only access to information services)
+- `USER` - Full access to all business services
+- `ADMIN` - Administrative access + user management
+- `MODERATOR` - Content moderation capabilities
 
 ## 🚀 Quick Start
 
@@ -46,7 +46,18 @@ A modern microservices architecture built with **Spring Boot 3.4.1**, **Java 21 
    docker-compose up -d
    ```
 
-2. **Configure Google OAuth 2.0**
+2. **Configure Google OAuth 2.0** (see [Authentication Setup](#-authentication-setup))
+
+3. **Build and start all services**
+   ```bash
+   ./gradlew build -x test
+   docker-compose up -d
+   ```
+
+4. **Test OAuth2 login**
+   - Open: http://localhost:8081/login/oauth2/authorization/google
+   - Authenticate with Google
+   - Receive JWT tokens
 
 ### Local Development (Without Docker)
 
@@ -111,24 +122,29 @@ docker-compose down
 
 For detailed Docker instructions, see [DOCKER.md](DOCKER.md)
 
-### Environment Variables (Optional)
+### Environment Variables
 
-Create `.env` file in project root:
+Create `.env` file in project root (automatically loaded by Docker Compose):
 ```env
 # Database
-DB_HOST=localhost
+DB_HOST=postgres
 DB_PORT=5432
-DB_NAME=whocloud
+DB_NAME=authdb
 DB_USER=whocloud
 DB_PASSWORD=whocloud123
 
-# JWT (for production, use strong secret)
-JWT_SECRET=your-secure-256-bit-secret-key-change-this-in-production
+# JWT Secret (REQUIRED - use alphanumeric only, min 256 bits)
+JWT_SECRET=n1DgZNcLCVixhobxWStmxXjI0LN1yRABYwUt2yNBtE-secure-jwt-secret-key-256bits
 
-# Google OAuth (when implemented)
-GOOGLE_CLIENT_ID=your-client-id
-GOOGLE_CLIENT_SECRET=your-client-secret
+# Google OAuth 2.0 (REQUIRED for OAuth2 login)
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-client-secret
 ```
+
+**Important**: 
+- `JWT_SECRET` must be alphanumeric (no special characters like `$`, `{`, `}` that Docker interprets)
+- Google OAuth credentials must be configured in Google Cloud Console
+- `.env` file is git-ignored for security
 
 ### Access Points
 
@@ -138,17 +154,33 @@ GOOGLE_CLIENT_SECRET=your-client-secret
 - **User Management**: http://localhost:8082
 - **Admin Portal**: http://localhost:8088
 
-### Testing Endpoints
+### Testing Authentication & Endpoints
 
+**1. OAuth2 Login (Google)**
 ```bash
+# Open in browser
+http://localhost:8081/login/oauth2/authorization/google
+
+# After authentication, you'll receive:
+# - Access Token (JWT)
+# - Refresh Token
+# - User info with GUEST role
+```
+
+**2. Test with JWT Token**
+```bash
+# Replace YOUR_TOKEN with the access token from OAuth2 response
+TOKEN="your-jwt-token-here"
+
 # Public endpoint (no auth required)
 curl http://localhost:8080/api/public/welcome
 
-# Information Service A
-curl http://localhost:8080/api/information/a
+# Information Service A (GUEST can access)
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/information/a
 
-# Business Service 1
-curl http://localhost:8080/api/business/service1
+# Business Service 1 (GUEST denied - requires USER role)
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/business/service1
+# Returns: 403 Forbidden
 
 # Health check
 curl http://localhost:8080/actuator/health
@@ -183,7 +215,82 @@ who-cloud/
 - Services use Spring Boot starters for web, JPA, security
 - API Gateway routes to all backend services
 
-## 🔧 Development
+## � Authentication Setup
+
+### Google OAuth 2.0 Configuration
+
+**1. Create Google OAuth 2.0 Credentials**
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing
+3. Navigate to **APIs & Services > Credentials**
+4. Click **Create Credentials > OAuth 2.0 Client ID**
+5. Configure OAuth consent screen:
+   - User Type: External
+   - App name: WHO Cloud
+   - Support email: your-email@example.com
+   - Scopes: email, profile
+6. Create OAuth 2.0 Client ID:
+   - Application type: Web application
+   - Name: WHO Cloud Auth Service
+   - Authorized redirect URIs:
+     - `http://localhost:8081/login/oauth2/code/google`
+
+**2. Configure Environment Variables**
+
+Add to `.env` file:
+```env
+GOOGLE_CLIENT_ID=329578610455-xxxxxxxxxxxxxxxxxx.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxxxxxxxxxx
+```
+
+**3. Database Schema**
+
+The `users` table enforces role constraint:
+```sql
+ALTER TABLE users ADD CONSTRAINT users_role_check 
+CHECK (role IN ('GUEST', 'USER', 'ADMIN', 'MODERATOR'));
+```
+
+**4. OAuth2 Flow**
+
+1. **User initiates login**: `GET http://localhost:8081/login/oauth2/authorization/google`
+2. **Redirects to Google** for authentication
+3. **Google callback**: `GET http://localhost:8081/login/oauth2/code/google?code=...`
+4. **Auto-registration**: New users created with `GUEST` role
+5. **JWT tokens returned**: HTML page displays access token and refresh token
+6. **Token usage**: Include in Authorization header: `Bearer {token}`
+
+**5. User Management**
+
+- **Auto-registration**: First-time Google login → `GUEST` role
+- **Role upgrade**: Admin promotes `GUEST` → `USER` via admin portal
+- **Database lookup**: By `google_id` first, then `email`
+- **Last login tracking**: Updated on each successful authentication
+
+### JWT Token Structure
+
+```json
+{
+  "sub": "username",
+  "role": "GUEST",
+  "iat": 1735776000,
+  "exp": 1735862400
+}
+```
+
+**Token Validity**: 24 hours (86400000 ms)
+
+### Role-Based Access Control
+
+| Role | Information Services | Business Services | Admin Portal |
+|------|---------------------|-------------------|-------------|
+| GUEST | ✅ Read-only | ❌ Denied | ❌ Denied |
+| USER | ✅ Full access | ✅ Full access | ❌ Denied |
+| ADMIN | ✅ Full access | ✅ Full access | ✅ Full access |
+| MODERATOR | ✅ Full access | ✅ Full access | ⚠️ Limited |
+
+## �🔧 Development
 
 ### Building Specific Modules
 
@@ -362,11 +469,32 @@ docker-compose logs -f service-name
 - `GET /api/admin/dashboard` - Admin dashboard
 - `GET /api/admin/stats` - System statistics
 
-### Authentication (TODO - Implementation Pending)
-- `POST /api/auth/login` - Login with credentials
-- `POST /api/auth/register` - Register new user
-- `GET /api/auth/validate` - Validate JWT token
-- `POST /api/auth/google` - Google OAuth flow
+### Authentication ✅
+- `GET /login/oauth2/authorization/google` - Initiate Google OAuth2 login
+- `GET /login/oauth2/code/google` - OAuth2 callback (handled automatically)
+- `POST /api/auth/login` - Login with credentials (TODO)
+- `POST /api/auth/register` - Register new user (TODO)
+- `POST /api/auth/refresh` - Refresh JWT token (TODO)
+- `GET /api/auth/validate` - Validate JWT token (TODO)
+
+**OAuth2 Response Example**:
+```json
+{
+  "success": true,
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "550e8400-e29b-41d4-a716-446655440000",
+  "tokenType": "Bearer",
+  "expiresIn": 86400000,
+  "user": {
+    "id": 1,
+    "username": "kvoznjuk",
+    "email": "kvoznjuk@gmail.com",
+    "fullName": "Konstantin Voznjuk",
+    "role": "GUEST",
+    "googleId": "113418038115658957172"
+  }
+}
+```
 
 ## 🎯 Roadmap
 
@@ -378,12 +506,17 @@ docker-compose logs -f service-name
 - [x] Docker containerization
 - [x] Basic REST endpoints
 
-### Phase 2: Authentication & Authorization (In Progress)
-- [ ] Implement JWT authentication
-- [ ] Google OAuth 2.0 integration
-- [ ] User entity and repository
-- [ ] Role-based access control
-- [ ] JWT filter for protected endpoints
+### Phase 2: Authentication & Authorization ✅
+- [x] Implement JWT authentication
+- [x] Google OAuth 2.0 integration with auto-registration
+- [x] User entity with GUEST/USER/ADMIN/MODERATOR roles
+- [x] Role-based access control (@PreAuthorize)
+- [x] JWT filter for protected endpoints (API Gateway)
+- [x] Database constraint for role validation
+- [x] Transactional OAuth2 success handler
+- [ ] Traditional username/password login
+- [ ] JWT refresh token endpoint
+- [ ] Admin portal for user management
 
 ### Phase 3: Business Logic
 - [ ] Implement user management CRUD
@@ -414,7 +547,7 @@ This project is licensed under the MIT License.
 ## 👥 Team
 
 - **Repository**: https://github.com/vozniukk/who-cloud
-- **Branch**: feature/google-sso
+- **Branch**: docker-success (OAuth2 implemented)
 
 ## 📞 Support
 

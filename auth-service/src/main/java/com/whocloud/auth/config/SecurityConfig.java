@@ -51,6 +51,13 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)  // Allow sessions for OAuth2
                 )
                 .oauth2Login(oauth2 -> oauth2
+                        .loginPage("/login")  // Disable default login page generation
+                        .authorizationEndpoint(authorization -> authorization
+                                .baseUri("/login/oauth2/authorization")
+                        )
+                        .redirectionEndpoint(redirection -> redirection
+                                .baseUri("/login/oauth2/code/*")
+                        )
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
                         )

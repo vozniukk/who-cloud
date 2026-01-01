@@ -13,7 +13,33 @@ Complete guide for deploying WHO Cloud microservices with Docker and Docker Comp
 
 ## 🚀 Quick Start
 
-### Step 1: Build JARs Locally
+### Step 1: Configure Environment Variables
+
+Create `.env` file in project root:
+
+```env
+# Database Configuration
+DB_HOST=postgres
+DB_PORT=5432
+DB_NAME=authdb
+DB_USER=whocloud
+DB_PASSWORD=whocloud123
+
+# JWT Configuration (REQUIRED - alphanumeric only)
+JWT_SECRET=n1DgZNcLCVixhobxWStmxXjI0LN1yRABYwUt2yNBtE-secure-jwt-secret-key-256bits
+
+# Google OAuth 2.0 (REQUIRED for OAuth2 login)
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+```
+
+**Important Notes**:
+- `JWT_SECRET` must be alphanumeric (avoid `$`, `{`, `}` as Docker Compose interprets them)
+- Get Google OAuth credentials from [Google Cloud Console](https://console.cloud.google.com/)
+- Authorized redirect URI: `http://localhost:8081/login/oauth2/code/google`
+- `.env` file is automatically loaded by Docker Compose
+
+### Step 2: Build JARs Locally
 
 **IMPORTANT**: You must build the JARs before running Docker Compose, as the Dockerfiles copy pre-built JARs.
 
@@ -30,7 +56,7 @@ Complete guide for deploying WHO Cloud microservices with Docker and Docker Comp
 - `auth-service/build/libs/auth-service-1.0.0-SNAPSHOT.jar`
 - ... and so on for all services
 
-### Step 2: Start All Services
+### Step 3: Start All Services
 
 ```bash
 # Build images and start containers
@@ -42,7 +68,7 @@ docker-compose up -d --build
 
 **First Startup**: Takes 2-3 minutes as Docker pulls base images and starts all services.
 
-### Step 3: Verify Deployment
+### Step 4: Verify Deployment
 
 ```bash
 # Check all containers are running
@@ -53,6 +79,9 @@ curl http://localhost:8080/api/public/welcome
 
 # Expected response:
 # {"success":true,"data":"Welcome to WHO Cloud Public Service","timestamp":"..."}
+
+# Test OAuth2 authentication (open in browser)
+http://localhost:8081/login/oauth2/authorization/google
 ```
 
 ## 📊 Services Overview
@@ -141,13 +170,21 @@ curl http://localhost:8089/actuator/health
 # Public endpoint (no auth required)
 curl http://localhost:8080/api/public/welcome
 
-# Information Service A
-curl http://localhost:8080/api/information/a
+# OAuth2 Login (open in browser to get JWT token)
+http://localhost:8081/login/oauth2/authorization/google
 
-# Information Service B
-curl http://localhost:8080/api/information/b
+# After OAuth2 login, use the JWT token:
+TOKEN="your-jwt-token-from-oauth2-response"
 
-# Business Service 1
+# Information Service A (GUEST can access)
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/information/a
+
+# Information Service B (GUEST can access)
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/information/b
+
+# Business Service 1 (GUEST denied - requires USER role)
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/business/service1
+# Returns: 403 Forbidden
 curl http://localhost:8080/api/business/service1
 
 # Admin Dashboard (TODO: requires auth)
