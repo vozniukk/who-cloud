@@ -1,26 +1,9 @@
-# Multi-stage build
-FROM eclipse-temurin:21-jdk-alpine AS builder
-WORKDIR /app
-
-# Copy Gradle files
-COPY gradle gradle
-COPY gradlew .
-COPY settings.gradle.kts .
-COPY build.gradle.kts .
-
-# Copy all modules
-COPY common common
-COPY auth-service auth-service
-
-# Make gradlew executable and build
-RUN chmod +x gradlew && sed -i 's/\r$//' gradlew && ./gradlew :auth-service:build -x test --no-daemon
-
-# Runtime stage
+# Runtime stage only - build locally first with: gradlew build -x test
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Copy the jar from builder
-COPY --from=builder /app/auth-service/build/libs/*.jar app.jar
+# Copy the pre-built jar
+COPY build/libs/*.jar app.jar
 
 # Expose port
 EXPOSE 8081
