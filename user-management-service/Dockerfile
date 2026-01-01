@@ -13,7 +13,7 @@ COPY common common
 COPY user-management-service user-management-service
 
 # Make gradlew executable and build
-RUN chmod +x gradlew && sh gradlew :user-management-service:build -x test --no-daemon
+RUN chmod +x gradlew && sed -i 's/\r$//' gradlew && ./gradlew :user-management-service:build -x test --no-daemon
 
 # Runtime stage
 FROM eclipse-temurin:21-jre-alpine

@@ -13,7 +13,7 @@ COPY common common
 COPY auth-service auth-service
 
 # Make gradlew executable and build
-RUN chmod +x gradlew && sh gradlew :auth-service:build -x test --no-daemon
+RUN chmod +x gradlew && sed -i 's/\r$//' gradlew && ./gradlew :auth-service:build -x test --no-daemon
 
 # Runtime stage
 FROM eclipse-temurin:21-jre-alpine
