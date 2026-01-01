@@ -37,10 +37,13 @@ public class User implements UserDetails {
     @Column(name = "full_name")
     private String fullName;
 
+    @Column(name = "google_id", unique = true)
+    private String googleId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
-    private Role role = Role.USER;
+    private Role role = Role.GUEST;
 
     @Column(name = "is_enabled")
     @Builder.Default
@@ -115,8 +118,9 @@ public class User implements UserDetails {
     }
 
     public enum Role {
-        USER,
-        ADMIN,
-        MODERATOR
+        GUEST,      // Auto-registered via Google OAuth
+        USER,       // Promoted by administrator
+        MODERATOR,  // Elevated privileges
+        ADMIN       // Full platform access
     }
 }

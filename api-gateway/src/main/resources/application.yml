@@ -7,45 +7,138 @@ spring:
   cloud:
     gateway:
       routes:
-        - id: auth-service
-          uri: http://${AUTH_SERVICE_HOST:localhost}:8081
-          predicates:
-            - Path=/api/auth/**
-        - id: user-management-service
-          uri: http://${USER_SERVICE_HOST:localhost}:8082
-          predicates:
-            - Path=/api/users/**
-        - id: information-service-a
-          uri: http://${INFO_A_SERVICE_HOST:localhost}:8083
-          predicates:
-            - Path=/api/information/a/**
-        - id: information-service-b
-          uri: http://${INFO_B_SERVICE_HOST:localhost}:8084
-          predicates:
-            - Path=/api/information/b/**
-        - id: business-service-1
-          uri: http://${BUSINESS_1_SERVICE_HOST:localhost}:8085
-          predicates:
-            - Path=/api/business/service1/**
-        - id: business-service-2
-          uri: http://${BUSINESS_2_SERVICE_HOST:localhost}:8086
-          predicates:
-            - Path=/api/business/service2/**
-        - id: business-service-3
-          uri: http://${BUSINESS_3_SERVICE_HOST:localhost}:8087
-          predicates:
-            - Path=/api/business/service3/**
-        - id: admin-portal-service
-          uri: http://${ADMIN_SERVICE_HOST:localhost}:8088
-          predicates:
-            - Path=/api/admin/**
+        # Public Web Service - No authentication required
         - id: public-web-service
           uri: http://${PUBLIC_SERVICE_HOST:localhost}:8089
           predicates:
             - Path=/api/public/**
+          filters:
+            - StripPrefix=2
+        
+        # OAuth2 Login Routes - No authentication required (handled by Spring Security)
+        - id: oauth2-authorization
+          uri: http://${AUTH_SERVICE_HOST:localhost}:8081
+          predicates:
+            - Path=/login/oauth2/**
+        
+        - id: oauth2-callback
+          uri: http://${AUTH_SERVICE_HOST:localhost}:8081
+          predicates:
+            - Path=/oauth2/**
+        
+        # Auth Service - Mixed access (some endpoints public, some protected)
+        - id: auth-service
+          uri: http://${AUTH_SERVICE_HOST:localhost}:8081
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - StripPrefix=1
+        
+        # Information Service A - Requires authentication (GUEST or higher)
+        - id: information-service-a
+          uri: http://${INFO_A_SERVICE_HOST:localhost}:8083
+          predicates:
+            - Path=/api/info-a/**
+          filters:
+            - StripPrefix=2
+            - name: JwtAuthenticationFilter
+              args:
+                requiredRoles: GUEST,USER,MODERATOR,ADMIN
+        
+        # Information Service B - Requires USER role or higher
+        - id: information-service-b
+          uri: http://${INFO_B_SERVICE_HOST:localhost}:8084
+          predicates:
+            - Path=/api/info-b/**
+          filters:
+            - StripPrefix=2
+            - name: JwtAuthenticationFilter
+              args:
+                requiredRoles: USER,MODERATOR,ADMIN
+        
+        # Business Service 1 - Requires USER role or higher
+        - id: business-service-1
+          uri: http://${BUSINESS_1_SERVICE_HOST:localhost}:8085
+          predicates:
+            - Path=/api/business-1/**
+          filters:
+            - StripPrefix=2
+            - name: JwtAuthenticationFilter
+              args:
+                requiredRoles: USER,MODERATOR,ADMIN
+        
+        # Business Service 2 - Requires USER role or higher
+        - id: business-service-2
+          uri: http://${BUSINESS_2_SERVICE_HOST:localhost}:8086
+          predicates:
+            - Path=/api/business-2/**
+          filters:
+            - StripPrefix=2
+            - name: JwtAuthenticationFilter
+              args:
+                requiredRoles: USER,MODERATOR,ADMIN
+        
+        # Business Service 3 - Requires USER role or higher
+        - id: business-service-3
+          uri: http://${BUSINESS_3_SERVICE_HOST:localhost}:8087
+          predicates:
+            - Path=/api/business-3/**
+          filters:
+            - StripPrefix=2
+            - name: JwtAuthenticationFilter
+              args:
+                requiredRoles: USER,MODERATOR,ADMIN
+        
+        # User Management Service - Requires USER role or higher
+        - id: user-management-service
+          uri: http://${USER_SERVICE_HOST:localhost}:8082
+          predicates:
+            - Path=/api/users/**
+          filters:
+            - StripPrefix=2
+            - name: JwtAuthenticationFilter
+              args:
+                requiredRoles: USER,MODERATOR,ADMIN
+        
+        # Admin Portal Service - Requires ADMIN role only
+        - id: admin-portal-service
+          uri: http://${ADMIN_SERVICE_HOST:localhost}:8088
+          predicates:
+            - Path=/api/admin/**
+          filters:
+            - StripPrefix=2
+            - name: JwtAuthenticationFilter
+              args:
+                requiredRoles: ADMIN
+      
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:3000"
+              - "http://localhost:8080"
+              - "http://localhost:4200"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+
+jwt:
+  secret: ${JWT_SECRET:who-cloud-secret-key-2026-change-this-in-production-minimum-256-bits}
+
+logging:
+  level:
+    com.whocloud.gateway: DEBUG
+    org.springframework.cloud.gateway: DEBUG
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info
+

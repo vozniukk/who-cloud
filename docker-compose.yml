@@ -124,8 +124,17 @@ services:
       context: .
       dockerfile: admin-portal-service/Dockerfile
     container_name: whocloud-admin
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: authdb
+      DB_USER: whocloud
+      DB_PASSWORD: whocloud123
     ports:
       - "8088:8088"
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - whocloud-network
     healthcheck:
@@ -146,7 +155,9 @@ services:
       DB_NAME: authdb
       DB_USER: whocloud
       DB_PASSWORD: whocloud123
-      JWT_SECRET: your-secret-key-change-in-production-minimum-256-bits-required-for-hs256
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production-minimum-256-bits-required-for-hs256}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
     ports:
       - "8081:8081"
     depends_on:
@@ -201,6 +212,7 @@ services:
       BUSINESS_3_SERVICE_HOST: business-service-3
       ADMIN_SERVICE_HOST: admin-portal-service
       PUBLIC_SERVICE_HOST: public-web-service
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production-minimum-256-bits-required-for-hs256}
     ports:
       - "8080:8080"
     depends_on:
