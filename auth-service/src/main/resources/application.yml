@@ -35,11 +35,19 @@ spring:
             user-name-attribute: sub
 
 jwt:
-  secret: ${JWT_SECRET:your-256-bit-secret-key-change-this-in-production}
+  secret: ${JWT_SECRET:who-cloud-secret-key-2026-change-this-in-production-minimum-256-bits}
   expiration: 86400000  # 24 hours in milliseconds
+
+logging:
+  level:
+    com.whocloud.auth: DEBUG
+    org.springframework.security: DEBUG
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info
+  endpoint:
+    health:
+      show-details: always
