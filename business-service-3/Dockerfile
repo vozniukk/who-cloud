@@ -7,7 +7,7 @@ COPY settings.gradle.kts .
 COPY build.gradle.kts .
 COPY common common
 COPY business-service-3 business-service-3
-RUN ./gradlew :business-service-3:build -x test --no-daemon
+RUN chmod +x gradlew && sh gradlew :business-service-3:build -x test --no-daemon
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app

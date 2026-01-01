@@ -12,8 +12,8 @@ COPY build.gradle.kts .
 COPY common common
 COPY api-gateway api-gateway
 
-# Build the application
-RUN ./gradlew :api-gateway:build -x test --no-daemon
+# Make gradlew executable and build
+RUN chmod +x gradlew && sh gradlew :api-gateway:build -x test --no-daemon
 
 # Runtime stage
 FROM eclipse-temurin:21-jre-alpine

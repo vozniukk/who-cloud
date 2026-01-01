@@ -7,7 +7,7 @@ COPY settings.gradle.kts .
 COPY build.gradle.kts .
 COPY common common
 COPY public-web-service public-web-service
-RUN ./gradlew :public-web-service:build -x test --no-daemon
+RUN chmod +x gradlew && sh gradlew :public-web-service:build -x test --no-daemon
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
