@@ -8,12 +8,14 @@ A modern microservices architecture built with **Spring Boot 3.4.1**, **Java 21 
 - **Java**: 21 LTS (Eclipse Temurin)
 - **Spring Boot**: 3.4.1
 - **Spring Cloud Gateway**: 2024.0.0
+- **Reverse Proxy**: nginx alpine (production entry point)
 - **Build Tool**: Gradle 8.11.1 with Kotlin DSL
 - **Database**: PostgreSQL 16-alpine
 - **Containerization**: Docker + Docker Compose
 - **Target Platform**: Kubernetes on VPS
 
 ### Microservices
+- **nginx** (80/443) - Reverse proxy with rate limiting & SSL/TLS ✅
 - **API Gateway** (8080) - Spring Cloud Gateway routing all requests
 - **Auth Service** (8081) - JWT authentication + Google OAuth2 ✅
 - **User Management Service** (8082) - User profiles and role management
@@ -41,23 +43,35 @@ A modern microservices architecture built with **Spring Boot 3.4.1**, **Java 21 
 
 ### Setup
 
-1. **Start PostgreSQL**
+1. **Clone the repository**
    ```bash
-   docker-compose up -d
+   git clone https://github.com/vozniukk/who-cloud.git
+   cd who-cloud
    ```
 
-2. **Configure Google OAuth 2.0** (see [Authentication Setup](#-authentication-setup))
+2. **Configure Google OAuth 2.0** (see [OAUTH2_SETUP.md](OAUTH2_SETUP.md))
+   - Create Google OAuth 2.0 credentials
+   - Add `.env` file with client ID/secret
 
-3. **Build and start all services**
+3. **Generate SSL Certificates** (see [REVERSE_PROXY.md](REVERSE_PROXY.md))
    ```bash
-   ./gradlew build -x test
-   docker-compose up -d
+   cd nginx/ssl
+   # For development (self-signed)
+   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+     -keyout key.pem -out cert.pem \
+     -subj "/C=US/ST=State/L=City/O=WHO-Cloud/CN=localhost"
    ```
 
-4. **Test OAuth2 login**
-   - Open: http://localhost:8081/login/oauth2/authorization/google
-   - Authenticate with Google
-   - Receive JWT tokens
+4. **Build and start all services**
+   ```bash
+   docker-compose up -d --build
+   ```
+
+5. **Access application**
+   - **Public Portal**: http://localhost (through nginx reverse proxy)
+   - **Direct API**: http://localhost:8080 (development/testing)
+   - **OAuth2 Login**: http://localhost/login/oauth2/authorization/google
+   - **nginx Status**: http://localhost/nginx_status (monitoring)
 
 ### Local Development (Without Docker)
 

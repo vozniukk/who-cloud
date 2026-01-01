@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rate Limit Exceeded - WHO Cloud</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 60px 40px;
+            max-width: 600px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+        
+        .error-code {
+            font-size: 120px;
+            font-weight: 700;
+            color: #f5576c;
+            line-height: 1;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            font-size: 32px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        p {
+            font-size: 18px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        
+        .info-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+            text-align: left;
+        }
+        
+        .info-box h3 {
+            color: #856404;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        
+        .info-box ul {
+            color: #856404;
+            padding-left: 20px;
+        }
+        
+        .info-box li {
+            margin: 5px 0;
+        }
+        
+        .button {
+            display: inline-block;
+            padding: 14px 32px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(245, 87, 108, 0.4);
+        }
+        
+        .details {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 1px solid #eee;
+            font-size: 14px;
+            color: #999;
+        }
+        
+        .countdown {
+            font-size: 24px;
+            font-weight: 600;
+            color: #f5576c;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="error-code">429</div>
+        <h1>Too Many Requests</h1>
+        <p>You've exceeded the rate limit for API requests. Please slow down and try again in a moment.</p>
+        
+        <div class="info-box">
+            <h3>Current Rate Limits:</h3>
+            <ul>
+                <li>API Endpoints: 100 requests per second</li>
+                <li>Burst Capacity: 200 additional requests</li>
+                <li>OAuth Endpoints: 20 requests per second</li>
+                <li>Connections: 20 concurrent per IP</li>
+            </ul>
+        </div>
+        
+        <div class="countdown">Please wait a few seconds...</div>
+        
+        <a href="/" class="button">Go to Homepage</a>
+        
+        <div class="details">
+            If you need higher rate limits, please contact our support team.
+        </div>
+    </div>
+    
+    <script>
+        // Auto-reload after 5 seconds
+        let countdown = 5;
+        const countdownElement = document.querySelector('.countdown');
+        
+        const timer = setInterval(() => {
+            countdown--;
+            if (countdown > 0) {
+                countdownElement.textContent = `Retrying in ${countdown} seconds...`;
+            } else {
+                countdownElement.textContent = 'Retrying now...';
+                clearInterval(timer);
+                window.location.reload();
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
