@@ -153,4 +153,101 @@ public class UserManagementController {
         List<AuditLogDto> auditLogs = userManagementService.getAllAuditLogs();
         return ResponseEntity.ok(ApiResponse.success(auditLogs));
     }
+
+    /**
+     * Update user profile
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<UserDto>> updateUserProfile(
+            @PathVariable Long id,
+            @Valid @RequestBody UserDto updateRequest,
+            @RequestHeader(value = "X-User-Id", required = false) String adminUsername) {
+        
+        log.info("PUT /admin/users/{} - Update user profile", id);
+        
+        String admin = (adminUsername != null) ? adminUsername : "system";
+        
+        try {
+            UserDto updatedUser = userManagementService.updateUserProfile(id, updateRequest, admin);
+            return ResponseEntity.ok(ApiResponse.success("User profile updated successfully", updatedUser));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage(), null));
+        }
+    }
+
+    /**
+     * Delete user (soft delete - disable account)
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteUser(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Id", required = false) String adminUsername) {
+        
+        log.info("DELETE /admin/users/{} - Delete user", id);
+        
+        String admin = (adminUsername != null) ? adminUsername : "system";
+        
+        try {
+            userManagementService.deleteUser(id, admin);
+            return ResponseEntity.ok(ApiResponse.success("User deleted successfully (account disabled)", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage(), null));
+        }
+    }
+
+    /**
+     * Permanently delete user from database (use with caution!)
+     */
+    @DeleteMapping("/{id}/permanent")
+    public ResponseEntity<ApiResponse<Void>> permanentlyDeleteUser(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Id", required = false) String adminUsername) {
+        
+        log.warn("DELETE /admin/users/{}/permanent - PERMANENTLY delete user", id);
+        
+        String admin = (adminUsername != null) ? adminUsername : "system";
+        
+        try {
+            userManagementService.permanentlyDeleteUser(id, admin);
+            return ResponseEntity.ok(ApiResponse.success("User PERMANENTLY deleted from database", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage(), null));
+        }
+    }
+
+    /**
+     * Get user statistics
+     */
+    @GetMapping("/stats")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getUserStatistics() {
+        log.info("GET /admin/users/stats - Get user statistics");
+        
+        List<UserDto> allUsers = userManagementService.getAllUsers();
+        
+        long totalUsers = allUsers.size();
+        long guestUsers = allUsers.stream().filter(u -> "GUEST".equals(u.getRole())).count();
+        long regularUsers = allUsers.stream().filter(u -> "USER".equals(u.getRole())).count();
+        long moderators = allUsers.stream().filter(u -> "MODERATOR".equals(u.getRole())).count();
+        long admins = allUsers.stream().filter(u -> "ADMIN".equals(u.getRole())).count();
+        long activeUsers = allUsers.stream().filter(UserDto::isEnabled).count();
+        long disabledUsers = totalUsers - activeUsers;
+        
+        Map<String, Object> stats = Map.of(
+                "totalUsers", totalUsers,
+                "activeUsers", activeUsers,
+                "disabledUsers", disabledUsers,
+                "roleBreakdown", Map.of(
+                        "GUEST", guestUsers,
+                        "USER", regularUsers,
+                        "MODERATOR", moderators,
+                        "ADMIN", admins
+                )
+        );
+        
+        return ResponseEntity.ok(ApiResponse.success(stats));
+    }
 }
+

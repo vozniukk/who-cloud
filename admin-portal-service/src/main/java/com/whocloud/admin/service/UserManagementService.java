@@ -154,6 +154,118 @@ public class UserManagementService {
     }
 
     /**
+     * Update user profile information
+     */
+    @Transactional
+    public UserDto updateUserProfile(Long userId, UserDto updateRequest, String adminUsername) {
+        log.info("Updating user profile: userId={}, admin={}", userId, adminUsername);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+
+        StringBuilder changes = new StringBuilder();
+
+        // Update email if provided and different
+        if (updateRequest.getEmail() != null && !updateRequest.getEmail().equals(user.getEmail())) {
+            String oldEmail = user.getEmail();
+            user.setEmail(updateRequest.getEmail());
+            changes.append(String.format("Email: %s → %s; ", oldEmail, updateRequest.getEmail()));
+        }
+
+        // Update full name if provided and different
+        if (updateRequest.getFullName() != null && !updateRequest.getFullName().equals(user.getFullName())) {
+            String oldName = user.getFullName();
+            user.setFullName(updateRequest.getFullName());
+            changes.append(String.format("Name: %s → %s; ", oldName, updateRequest.getFullName()));
+        }
+
+        if (changes.length() == 0) {
+            throw new IllegalArgumentException("No changes detected");
+        }
+
+        User updatedUser = userRepository.save(user);
+
+        // Create audit log
+        createAuditLog(
+                "PROFILE_UPDATE",
+                adminUsername,
+                user.getUsername(),
+                null,
+                null,
+                "Profile updated: " + changes.toString()
+        );
+
+        log.info("User profile updated successfully: username={}", user.getUsername());
+
+        return convertToDto(updatedUser);
+    }
+
+    /**
+     * Delete user (soft delete by disabling)
+     */
+    @Transactional
+    public void deleteUser(Long userId, String adminUsername) {
+        log.info("Deleting user: userId={}, admin={}", userId, adminUsername);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+
+        // Prevent deleting admin users
+        if (user.getRole() == User.Role.ADMIN) {
+            throw new IllegalArgumentException("Cannot delete admin users");
+        }
+
+        // Soft delete by disabling
+        user.setEnabled(false);
+        userRepository.save(user);
+
+        // Create audit log
+        createAuditLog(
+                "USER_DELETE",
+                adminUsername,
+                user.getUsername(),
+                "ACTIVE",
+                "DELETED",
+                "User account deleted (disabled)"
+        );
+
+        log.info("User deleted successfully: username={}", user.getUsername());
+    }
+
+    /**
+     * Permanently delete user from database
+     */
+    @Transactional
+    public void permanentlyDeleteUser(Long userId, String adminUsername) {
+        log.warn("PERMANENTLY deleting user: userId={}, admin={}", userId, adminUsername);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+
+        // Prevent deleting admin users
+        if (user.getRole() == User.Role.ADMIN) {
+            throw new IllegalArgumentException("Cannot delete admin users");
+        }
+
+        String username = user.getUsername();
+
+        // Create audit log before deletion
+        createAuditLog(
+                "USER_PERMANENT_DELETE",
+                adminUsername,
+                username,
+                "EXISTS",
+                "DELETED",
+                "User account permanently deleted from database"
+        );
+
+        // Permanently delete
+        userRepository.delete(user);
+
+        log.warn("User PERMANENTLY deleted: username={}", username);
+    }
+
+    /**
      * Create audit log entry
      */
     private void createAuditLog(String action, String performedBy, String targetUser,
