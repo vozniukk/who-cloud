@@ -35,15 +35,15 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)  // Disable default login form
+                .httpBasic(AbstractHttpConfigurer::disable)   // Disable basic auth
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/auth/register",
-                                "/api/auth/login",
-                                "/api/auth/refresh",
-                                "/api/auth/validate",
+                                "/",
+                                "/api/auth/**",
                                 "/oauth2/**",
-                                "/login/oauth2/**",
-                                "/actuator/**"
+                                "/login/**",
+                                "/actuator/**",
+                                "/error"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
@@ -51,7 +51,7 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)  // Allow sessions for OAuth2
                 )
                 .oauth2Login(oauth2 -> oauth2
-                        .loginPage("/login")  // Disable default login page generation
+                        // No custom login page - go directly to Google
                         .authorizationEndpoint(authorization -> authorization
                                 .baseUri("/login/oauth2/authorization")
                         )
