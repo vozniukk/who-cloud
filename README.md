@@ -16,7 +16,8 @@ A modern microservices architecture built with **Spring Boot 3.4.1**, **Java 21 
 
 ### Microservices
 - **nginx** (80/443) - Reverse proxy with rate limiting & SSL/TLS ✅
-- **API Gateway** (8080) - Spring Cloud Gateway routing all requests
+- **Next.js Dashboard** (3001) - Modern React dashboard with SSR ✅
+- **API Gateway** (8080) - Spring Cloud Gateway routing all requests ✅
 - **Auth Service** (8081) - JWT authentication + Google OAuth2 ✅
 - **User Management Service** (8082) - User profiles and role management
 - **Information Service A** (8083) - Information management endpoint
@@ -25,7 +26,7 @@ A modern microservices architecture built with **Spring Boot 3.4.1**, **Java 21 
 - **Business Service 2** (8086) - Business logic service
 - **Business Service 3** (8087) - Business logic service
 - **Admin Portal Service** (8088) - Administrative dashboard
-- **Public Web Service** (8089) - Public-facing APIs
+- **Public Web Service** (8089) - Public-facing APIs + database statistics ✅
 
 ### User Roles & Access Control ✅
 - `GUEST` - Auto-registered OAuth2 users (read-only access to information services)
@@ -69,6 +70,8 @@ A modern microservices architecture built with **Spring Boot 3.4.1**, **Java 21 
 
 5. **Access application**
    - **Public Portal**: http://localhost (through nginx reverse proxy)
+   - **Next.js Dashboard**: http://localhost:3001 (database statistics)
+   - **Database Stats API**: http://localhost/api/public/database-stats
    - **Direct API**: http://localhost:8080 (development/testing)
    - **OAuth2 Login**: http://localhost/login/oauth2/authorization/google
    - **nginx Status**: http://localhost/nginx_status (monitoring)
@@ -162,6 +165,8 @@ GOOGLE_CLIENT_SECRET=your-google-client-secret
 
 ### Access Points
 
+- **Next.js Dashboard**: http://localhost:3001 (database statistics)
+- **nginx Reverse Proxy**: http://localhost (routes to Next.js & API Gateway)
 - **API Gateway**: http://localhost:8080
 - **Public Service**: http://localhost:8089
 - **Auth Service**: http://localhost:8081
@@ -228,6 +233,91 @@ who-cloud/
 - All services depend on `common` module for shared DTOs
 - Services use Spring Boot starters for web, JPA, security
 - API Gateway routes to all backend services
+
+## 🎨 Frontend Integration
+
+### Next.js Dashboard (Port 3001)
+
+**Technology Stack:**
+- **Next.js 15** with App Router
+- **React 19** with TypeScript
+- **Tailwind CSS** for styling
+- **Server-Side Rendering (SSR)** for optimal performance
+
+**Features:**
+- 📊 Real-time database statistics display
+- 🔄 Automatic data refresh on page load
+- 📱 Responsive design with modern UI
+- 🌐 Integrated with nginx reverse proxy
+
+**Access Points:**
+- **Dashboard**: http://localhost:3001
+- **Via nginx**: http://localhost (routes to Next.js)
+- **Database Stats API**: http://localhost/api/public/database-stats
+
+**Architecture Flow:**
+```
+Browser → nginx (80) → Next.js (3001) → nginx → API Gateway (8080) → public-web-service (8089) → PostgreSQL
+```
+
+### Database Statistics Endpoint ✅
+
+**Endpoint**: `GET /api/public/database-stats`
+
+**Response Example:**
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "totalTables": 1,
+    "tables": [
+      {
+        "tableName": "test_data",
+        "recordCount": 12
+      }
+    ],
+    "timestamp": "2026-01-02T22:41:06.357165612"
+  },
+  "error": null,
+  "timestamp": "2026-01-02T22:41:06..."
+}
+```
+
+**Implementation:**
+- Service: `public-web-service` (Port 8089)
+- Queries: `information_schema.tables` + `pg_stat_user_tables`
+- Database: `whocloud` (dedicated database for public data)
+- Dependencies: `spring-boot-starter-jdbc` + PostgreSQL driver ✅
+
+### Database Architecture
+
+**Multi-Database Design** (Database-per-Service Pattern):
+
+| Service | Database | Tables | Purpose |
+|---------|----------|--------|---------|
+| **public-web-service** | `whocloud` | `test_data` | Public statistics and test data |
+| **auth-service** | `authdb` | `users`, `refresh_tokens`, `audit_logs` | Authentication & OAuth2 |
+| **user-management-service** | `userdb` | User management tables | User profiles & settings |
+
+**Test Data:**
+- Table: `test_data` (4 fields: id, name, category, value, created_at)
+- Records: 12 test entries with varied categories
+- Categories: Electronics, Clothing, Food, Healthcare, Software, Shipping, Manufacturing, Automotive, Infrastructure, Cloud
+- Purpose: Verify dashboard displays multi-table statistics correctly
+
+**Connection Details:**
+```yaml
+# public-web-service
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/whocloud
+    
+# auth-service  
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/authdb
+```
 
 ## � Authentication Setup
 
@@ -337,13 +427,23 @@ CHECK (role IN ('GUEST', 'USER', 'ADMIN', 'MODERATOR'));
 PostgreSQL configuration:
 - **Host**: localhost (or `postgres` in Docker network)
 - **Port**: 5432
-- **Databases**: `authdb`, `userdb`
+- **Databases**: 
+  - `whocloud` - Public service database (test_data table with 12 records) ✅
+  - `authdb` - Authentication database (users, refresh_tokens, audit_logs)
+  - `userdb` - User management database
 - **Username**: `whocloud`
 - **Password**: `whocloud123` (development only)
 
 Connect to database:
 ```bash
-docker exec -it whocloud-postgres psql -U whocloud -d authdb
+# Connect to whocloud database
+docker exec -it whocloud-postgres psql -U whocloud -d whocloud
+
+# List all databases
+docker exec -it whocloud-postgres psql -U whocloud -c "\l"
+
+# View test data
+docker exec -it whocloud-postgres psql -U whocloud -d whocloud -c "SELECT * FROM test_data;"
 ```
 
 ### Code Style
@@ -383,6 +483,24 @@ curl http://localhost:8080/actuator/health
 
 # Individual service health
 curl http://localhost:8089/actuator/health
+
+# Database statistics (via API Gateway)
+curl http://localhost/api/public/database-stats
+
+# Database statistics (direct)
+curl http://localhost:8089/api/public/database-stats
+```
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "totalTables": 1,
+    "tables": [{"tableName": "test_data", "recordCount": 12}],
+    "timestamp": "2026-01-02T22:41:06..."
+  }
+}
 ```
 
 ## 🚀 Deployment
@@ -462,6 +580,7 @@ docker-compose logs -f service-name
 ### Public Endpoints (No Auth)
 - `GET /api/public/welcome` - Welcome message
 - `GET /api/public/health` - Health status
+- `GET /api/public/database-stats` - Database statistics (tables & record counts) ✅
 
 ### Information Services (Auth Required - TODO)
 - `GET /api/information/a` - Information Service A
@@ -516,9 +635,13 @@ docker-compose logs -f service-name
 - [x] Multi-module Gradle project with Kotlin DSL
 - [x] Spring Boot 3.4.1 with Java 21
 - [x] API Gateway with Spring Cloud Gateway
-- [x] PostgreSQL database setup
+- [x] PostgreSQL database setup with multi-database architecture
 - [x] Docker containerization
 - [x] Basic REST endpoints
+- [x] nginx reverse proxy with routing
+- [x] Next.js frontend with SSR
+- [x] Database statistics endpoint
+- [x] Full stack integration (Frontend → nginx → API Gateway → Services → PostgreSQL)
 
 ### Phase 2: Authentication & Authorization ✅
 - [x] Implement JWT authentication
