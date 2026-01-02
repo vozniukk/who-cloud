@@ -17,11 +17,12 @@ services:
     depends_on:
       - api-gateway
       - auth-service
+      - frontend-service
     networks:
       - whocloud-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/actuator/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -53,12 +54,41 @@ services:
       context: .
       dockerfile: public-web-service/Dockerfile
     container_name: whocloud-public-web
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/whocloud
+      - SPRING_DATASOURCE_USERNAME=whocloud
+      - SPRING_DATASOURCE_PASSWORD=whocloud123
+    depends_on:
+      - postgres
     ports:
       - "8089:8089"
     networks:
       - whocloud-network
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8089/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Service (Port 3000) - Next.js UI
+  frontend-service:
+    build:
+      context: ./frontend-service
+      dockerfile: Dockerfile
+    container_name: whocloud-frontend
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://api-gateway:8080/api
+    depends_on:
+      - api-gateway
+      - public-web-service
+    ports:
+      - "3000:3000"
+    networks:
+      - whocloud-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
       interval: 30s
       timeout: 10s
       retries: 3

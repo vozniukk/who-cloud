@@ -12,8 +12,6 @@ spring:
           uri: http://${PUBLIC_SERVICE_HOST:localhost}:8089
           predicates:
             - Path=/api/public/**
-          filters:
-            - StripPrefix=2
         
         # OAuth2 Login Routes - No authentication required (handled by Spring Security)
         - id: oauth2-authorization

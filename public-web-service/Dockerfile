@@ -1,5 +1,5 @@
-# Multi-stage build
-# Runtime stage only - build locally first with: gradlew build -x test
+# Simple runtime-only Dockerfile
+# Build locally first: ./gradlew public-web-service:build -x test
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 COPY public-web-service/build/libs/public-web-service-1.0.0-SNAPSHOT.jar app.jar
