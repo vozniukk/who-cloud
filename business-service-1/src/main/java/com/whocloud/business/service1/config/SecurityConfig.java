@@ -31,21 +31,8 @@ public class SecurityConfig {
                         // Actuator endpoints
                         .requestMatchers("/actuator/**").permitAll()
                         
-                        // Public endpoints (if any)
-                        .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
-                        
-                        // Equipment endpoints - require authentication
-                        .requestMatchers("/api/equipment/**").authenticated()
-                        .requestMatchers("/api/custodians/**").authenticated()
-                        .requestMatchers("/api/reports/**").authenticated()
-                        
-                        // Reference data endpoints - require authentication
-                        .requestMatchers("/api/object-statuses/**").authenticated()
-                        .requestMatchers("/api/custodian-statuses/**").authenticated()
-                        .requestMatchers("/api/contract-types/**").authenticated()
-                        
-                        // All other requests require authentication
-                        .anyRequest().authenticated())
+                        // All endpoints - permit all since Gateway already validates JWT
+                        .anyRequest().permitAll())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

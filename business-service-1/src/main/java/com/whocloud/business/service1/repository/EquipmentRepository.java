@@ -49,5 +49,5 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long>, Jpa
 
     long countByCategoryId(Long categoryId);
 
-    long countByCurrentOwnerIsNull(); // Count in warehouse
+    long countByCurrentCustodianIsNull(); // Count in warehouse
 }

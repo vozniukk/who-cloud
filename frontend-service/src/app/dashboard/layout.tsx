@@ -58,6 +58,12 @@ export default function DashboardLayout({
               <Link href="/dashboard/custodians" className="block px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors">
                 <span className="text-lg">👥 Custodians</span>
               </Link>
+              <Link href="/dashboard/custodian-statuses" className="block px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+                <span className="text-lg">🏷️ Custodian Statuses</span>
+              </Link>
+              <Link href="/dashboard/contract-types" className="block px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+                <span className="text-lg">📄 Contract Types</span>
+              </Link>
             </>
           )}
 
