@@ -277,8 +277,8 @@ services:
       ADMIN_SERVICE_HOST: admin-portal-service
       PUBLIC_SERVICE_HOST: public-web-service
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production-minimum-256-bits-required-for-hs256}
-    expose:
-      - "8080"  # Internal only - not exposed to host
+    ports:
+      - "8080:8080"  # Expose to host for OAuth and API access
     depends_on:
       - auth-service
       - user-management-service

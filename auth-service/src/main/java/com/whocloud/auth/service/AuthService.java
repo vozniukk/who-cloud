@@ -228,4 +228,66 @@ public class AuthService {
                 .provider(user.getGoogleId() != null ? "Google" : "Local")
                 .build();
     }
+
+    // User Management methods for Admin
+    public java.util.List<UserManagementResponse> getAllUsers() {
+        log.debug("Getting all users for admin management");
+        return userRepository.findAll().stream()
+                .map(UserManagementResponse::fromUser)
+                .toList();
+    }
+
+    @Transactional
+    public UserManagementResponse updateUserRole(UpdateUserRoleRequest request) {
+        log.info("Updating user role - userId: {}, newRole: {}", request.getUserId(), request.getRole());
+        
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with id: " + request.getUserId()));
+        
+        User.Role newRole = User.Role.valueOf(request.getRole());
+        user.setRole(newRole);
+        user.setUpdatedAt(LocalDateTime.now());
+        
+        user = userRepository.save(user);
+        log.info("User role updated successfully - user: {}, role: {}", user.getUsername(), newRole);
+        
+        return UserManagementResponse.fromUser(user);
+    }
+
+    @Transactional
+    public UserManagementResponse updateUserStatus(UpdateUserStatusRequest request) {
+        log.info("Updating user status - userId: {}, enabled: {}", request.getUserId(), request.getEnabled());
+        
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with id: " + request.getUserId()));
+        
+        user.setEnabled(request.getEnabled());
+        user.setUpdatedAt(LocalDateTime.now());
+        
+        // If disabling user, revoke all refresh tokens
+        if (!request.getEnabled()) {
+            refreshTokenRepository.revokeAllByUser(user);
+            log.info("Revoked all refresh tokens for disabled user: {}", user.getUsername());
+        }
+        
+        user = userRepository.save(user);
+        log.info("User status updated successfully - user: {}, enabled: {}", user.getUsername(), request.getEnabled());
+        
+        return UserManagementResponse.fromUser(user);
+    }
+
+    @Transactional
+    public void deleteUser(Long userId) {
+        log.info("Deleting user with id: {}", userId);
+        
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with id: " + userId));
+        
+        // Revoke all refresh tokens first
+        refreshTokenRepository.revokeAllByUser(user);
+        
+        // Delete user
+        userRepository.delete(user);
+        log.info("User deleted successfully: {}", user.getUsername());
+    }
 }

@@ -33,10 +33,21 @@ public class JwtUtil {
 
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("role", userDetails.getAuthorities().stream()
+        
+        // Extract role from authorities
+        String role = userDetails.getAuthorities().stream()
                 .findFirst()
                 .map(auth -> auth.getAuthority().replace("ROLE_", ""))
-                .orElse("USER"));
+                .orElse("USER");
+        
+        claims.put("role", role);
+        claims.put("roles", java.util.List.of(role)); // For compatibility
+        
+        // If UserDetails is our User entity, add userId
+        if (userDetails instanceof com.whocloud.auth.entity.User) {
+            com.whocloud.auth.entity.User user = (com.whocloud.auth.entity.User) userDetails;
+            claims.put("userId", user.getId());
+        }
         
         return createToken(claims, userDetails.getUsername());
     }
@@ -44,6 +55,7 @@ public class JwtUtil {
     public String generateToken(String username, String role) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", role);
+        claims.put("roles", java.util.List.of(role)); // For compatibility
         return createToken(claims, username);
     }
 
@@ -66,6 +78,29 @@ public class JwtUtil {
 
     public String extractRole(String token) {
         return extractClaim(token, claims -> claims.get("role", String.class));
+    }
+
+    public Long extractUserId(String token) {
+        return extractClaim(token, claims -> {
+            Object userId = claims.get("userId");
+            if (userId instanceof Integer) {
+                return ((Integer) userId).longValue();
+            }
+            return userId != null ? ((Number) userId).longValue() : null;
+        });
+    }
+
+    public java.util.List<String> extractRoles(String token) {
+        return extractClaim(token, claims -> {
+            @SuppressWarnings("unchecked")
+            java.util.List<String> roles = claims.get("roles", java.util.List.class);
+            if (roles != null) {
+                return roles;
+            }
+            // Fallback to single role
+            String role = claims.get("role", String.class);
+            return role != null ? java.util.List.of(role) : java.util.List.of();
+        });
     }
 
     public Date extractExpiration(String token) {

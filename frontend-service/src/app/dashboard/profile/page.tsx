@@ -187,6 +187,87 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* API Testing Examples */}
+      <div className="bg-gradient-to-r from-green-900 to-teal-900 rounded-xl shadow-lg p-6 text-white">
+        <h2 className="text-2xl font-bold mb-4">🚀 API Testing Examples</h2>
+        <p className="text-green-100 mb-4">Use these curl commands to test API endpoints with your JWT token:</p>
+        
+        {/* Test Auth Endpoint */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-2 text-green-200">1. Test Authentication</h3>
+          <div className="bg-gray-900 p-4 rounded-lg overflow-auto">
+            <pre className="text-xs font-mono text-green-300">
+{`curl -X GET http://localhost:8080/api/auth/user-info \\
+  -H "Authorization: Bearer ${token.substring(0, 50)}..."`}
+            </pre>
+          </div>
+        </div>
+
+        {/* Database Stats */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-2 text-green-200">2. Get Database Statistics</h3>
+          <div className="bg-gray-900 p-4 rounded-lg overflow-auto">
+            <pre className="text-xs font-mono text-green-300">
+{`curl -X GET http://localhost:8080/api/database/stats \\
+  -H "Authorization: Bearer ${token.substring(0, 50)}..."`}
+            </pre>
+          </div>
+        </div>
+
+        {/* Equipment List */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-2 text-green-200">3. List Equipment (USER+ role required)</h3>
+          <div className="bg-gray-900 p-4 rounded-lg overflow-auto">
+            <pre className="text-xs font-mono text-green-300">
+{`curl -X GET "http://localhost:8080/api/business-service-1/equipment?page=0&size=10" \\
+  -H "Authorization: Bearer ${token.substring(0, 50)}..."`}
+            </pre>
+          </div>
+        </div>
+
+        {/* Custodians List */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-2 text-green-200">4. List Custodians (USER+ role required)</h3>
+          <div className="bg-gray-900 p-4 rounded-lg overflow-auto">
+            <pre className="text-xs font-mono text-green-300">
+{`curl -X GET "http://localhost:8080/api/business-service-1/custodians?page=0&size=10" \\
+  -H "Authorization: Bearer ${token.substring(0, 50)}..."`}
+            </pre>
+          </div>
+        </div>
+
+        {/* Generate Report */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-2 text-green-200">5. Generate Report (MODERATOR+ role required)</h3>
+          <div className="bg-gray-900 p-4 rounded-lg overflow-auto">
+            <pre className="text-xs font-mono text-green-300">
+{`curl -X POST "http://localhost:8080/api/business-service-1/reports/equipment" \\
+  -H "Authorization: Bearer ${token.substring(0, 50)}..." \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "startDate": "2024-01-01",
+    "endDate": "2024-12-31",
+    "format": "json"
+  }'`}
+            </pre>
+          </div>
+        </div>
+
+        {/* Copy Full Token Button */}
+        <div className="mt-6 flex items-center gap-4">
+          <button 
+            onClick={() => {
+              navigator.clipboard.writeText(token);
+              alert('Full JWT token copied to clipboard!');
+            }}
+            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+          >
+            📋 Copy Full Token
+          </button>
+          <p className="text-sm text-green-200">Click to copy the complete JWT token for use in API testing tools (Postman, Insomnia, etc.)</p>
+        </div>
+      </div>
     </div>
   );
 }

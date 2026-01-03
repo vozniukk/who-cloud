@@ -27,7 +27,7 @@ export default async function Home() {
             <nav className="flex gap-6">
               <Link href="/" className="text-gray-700 hover:text-purple-600 font-medium transition">Home</Link>
               <Link href="/api/public/welcome" className="text-gray-700 hover:text-purple-600 font-medium transition">API</Link>
-              <a href="/login/oauth2/authorization/google" className="bg-gradient-to-r from-purple-600 to-blue-500 text-white px-6 py-3 rounded-lg hover:shadow-lg transition font-semibold">
+              <a href="http://localhost:8080/login/oauth2/authorization/google" className="bg-gradient-to-r from-purple-600 to-blue-500 text-white px-6 py-3 rounded-lg hover:shadow-lg transition font-semibold">
                 🔐 Sign In with Google
               </a>
             </nav>

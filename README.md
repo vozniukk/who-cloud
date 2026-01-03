@@ -575,12 +575,44 @@ docker-compose logs -f service-name
 - Check network connectivity: `docker network inspect who-cloud_whocloud-network`
 - Verify credentials in application.yml
 
-## 📚 API Documentation
+## 📚 Documentation
+
+### Core Documentation
+- **[USER_MANAGEMENT.md](USER_MANAGEMENT.md)** - Complete admin user management system ✅
+  - Backend API endpoints and DTOs
+  - Frontend React components
+  - Security configuration
+  - Troubleshooting guide
+  
+- **[TROUBLESHOOTING_GUIDE.md](TROUBLESHOOTING_GUIDE.md)** - Comprehensive debugging guide ✅
+  - Path mapping issues (API Gateway + StripPrefix)
+  - CORS configuration (duplicate headers fix)
+  - Authentication errors (JWT, token expiration)
+  - Authorization errors (roles, permissions)
+  - Quick diagnostic commands
+
+- **[AUTH_IMPLEMENTATION.md](AUTH_IMPLEMENTATION.md)** - Authentication system details ✅
+  - JWT implementation
+  - OAuth2 Google integration
+  - SecurityConfig patterns
+  - CORS configuration strategy
+
+- **[OAUTH2_SETUP.md](OAUTH2_SETUP.md)** - Google OAuth2 setup guide ✅
+- **[REVERSE_PROXY.md](REVERSE_PROXY.md)** - nginx configuration guide ✅
+- **[FRONTEND_ARCHITECTURE.md](FRONTEND_ARCHITECTURE.md)** - Next.js frontend architecture ✅
+
+### API Documentation
 
 ### Public Endpoints (No Auth)
 - `GET /api/public/welcome` - Welcome message
 - `GET /api/public/health` - Health status
 - `GET /api/public/database-stats` - Database statistics (tables & record counts) ✅
+
+### Admin Endpoints ✅
+- `GET /api/auth/admin/users` - List all users (ADMIN only)
+- `PUT /api/auth/admin/users/role` - Update user role (ADMIN only)
+- `PUT /api/auth/admin/users/status` - Enable/disable user (ADMIN only)
+- `DELETE /api/auth/admin/users/{id}` - Delete user (ADMIN only)
 
 ### Information Services (Auth Required - TODO)
 - `GET /api/information/a` - Information Service A
@@ -605,10 +637,10 @@ docker-compose logs -f service-name
 ### Authentication ✅
 - `GET /login/oauth2/authorization/google` - Initiate Google OAuth2 login
 - `GET /login/oauth2/code/google` - OAuth2 callback (handled automatically)
-- `POST /api/auth/login` - Login with credentials (TODO)
-- `POST /api/auth/register` - Register new user (TODO)
-- `POST /api/auth/refresh` - Refresh JWT token (TODO)
-- `GET /api/auth/validate` - Validate JWT token (TODO)
+- `POST /api/auth/login` - Login with credentials ✅
+- `POST /api/auth/register` - Register new user ✅
+- `POST /api/auth/refresh` - Refresh JWT token ✅
+- `GET /api/auth/validate` - Validate JWT token ✅
 
 **OAuth2 Response Example**:
 ```json
@@ -644,30 +676,49 @@ docker-compose logs -f service-name
 - [x] Full stack integration (Frontend → nginx → API Gateway → Services → PostgreSQL)
 
 ### Phase 2: Authentication & Authorization ✅
-- [x] Implement JWT authentication
+- [x] Implement JWT authentication with access & refresh tokens
 - [x] Google OAuth 2.0 integration with auto-registration
 - [x] User entity with GUEST/USER/ADMIN/MODERATOR roles
 - [x] Role-based access control (@PreAuthorize)
 - [x] JWT filter for protected endpoints (API Gateway)
 - [x] Database constraint for role validation
 - [x] Transactional OAuth2 success handler
-- [ ] Traditional username/password login
-- [ ] JWT refresh token endpoint
-- [ ] Admin portal for user management
+- [x] Traditional username/password login & registration
+- [x] JWT refresh token endpoint with revocation
+- [x] Token validation endpoint
+- [x] Logout with refresh token cleanup
+- [x] Frontend authentication (Login, Register, OAuth2)
+- [x] Admin User Management Dashboard ✅
+  - [x] List all users with role badges
+  - [x] Update user roles (GUEST/USER/MODERATOR/ADMIN)
+  - [x] Enable/disable users
+  - [x] Delete users with confirmation
+  - [x] Real-time UI updates
 
-### Phase 3: Business Logic
-- [ ] Implement user management CRUD
+### Phase 3: Critical Bug Fixes & Improvements ✅
+- [x] Fixed path mapping mismatch (API Gateway StripPrefix vs Controller)
+- [x] Fixed authentication principal type (String vs UserDetails)
+- [x] Fixed duplicate CORS headers (disabled in services, enabled only in gateway)
+- [x] Fixed SecurityConfig granular permissions (no wildcard permitAll)
+- [x] Enhanced JwtAuthenticationFilter logging
+- [x] Comprehensive troubleshooting documentation
+- [x] Quick diagnostic PowerShell commands
+
+### Phase 4: Business Logic (In Progress)
+- [ ] Implement complete user profile management
 - [ ] Add business logic to services
-- [ ] Implement admin portal features
+- [ ] Implement admin portal analytics
 - [ ] Add data validation and error handling
+- [ ] Audit logging for admin actions
 
-### Phase 4: Production Ready
+### Phase 5: Production Ready
 - [ ] Kubernetes manifests
 - [ ] CI/CD pipeline (GitHub Actions)
 - [ ] Monitoring and logging (Prometheus/Grafana)
 - [ ] API documentation (Swagger/OpenAPI)
 - [ ] Integration tests
 - [ ] Performance testing
+- [ ] Security audit
 
 ## 🤝 Contributing
 

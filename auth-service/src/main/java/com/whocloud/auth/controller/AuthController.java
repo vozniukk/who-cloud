@@ -13,7 +13,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 @Slf4j
 public class AuthController {
@@ -74,5 +74,51 @@ public class AuthController {
         
         UserInfoResponse userInfo = authService.getUserInfo(userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.success(userInfo));
+    }
+
+    // User Management endpoints for Admin
+    @GetMapping("/admin/users")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<java.util.List<UserManagementResponse>>> getAllUsers(
+            @AuthenticationPrincipal String username) {
+        log.info("Admin requesting all users: {}", username);
+        
+        java.util.List<UserManagementResponse> users = authService.getAllUsers();
+        return ResponseEntity.ok(ApiResponse.success(users));
+    }
+
+    @PutMapping("/admin/users/role")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserManagementResponse>> updateUserRole(
+            @Valid @RequestBody UpdateUserRoleRequest request,
+            @AuthenticationPrincipal String username) {
+        log.info("Admin updating user role: {} - userId: {}, newRole: {}", 
+                username, request.getUserId(), request.getRole());
+        
+        UserManagementResponse updatedUser = authService.updateUserRole(request);
+        return ResponseEntity.ok(ApiResponse.success(updatedUser));
+    }
+
+    @PutMapping("/admin/users/status")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserManagementResponse>> updateUserStatus(
+            @Valid @RequestBody UpdateUserStatusRequest request,
+            @AuthenticationPrincipal String username) {
+        log.info("Admin updating user status: {} - userId: {}, enabled: {}", 
+                username, request.getUserId(), request.getEnabled());
+        
+        UserManagementResponse updatedUser = authService.updateUserStatus(request);
+        return ResponseEntity.ok(ApiResponse.success(updatedUser));
+    }
+
+    @DeleteMapping("/admin/users/{userId}")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<String>> deleteUser(
+            @PathVariable Long userId,
+            @AuthenticationPrincipal String username) {
+        log.info("Admin deleting user: {} - userId: {}", username, userId);
+        
+        authService.deleteUser(userId);
+        return ResponseEntity.ok(ApiResponse.success("User deleted successfully"));
     }
 }

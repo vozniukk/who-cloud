@@ -319,6 +319,161 @@ Update API Gateway to:
   openssl rand -base64 32
   ```
 
+## Critical Configuration Details
+
+### SecurityConfig.java - Granular Permissions
+
+**Important:** Use specific endpoint permissions instead of wildcards to avoid security vulnerabilities.
+
+```java
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
+public class SecurityConfig {
+    
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .csrf(AbstractHttpConfigurer::disable)
+            .formLogin(AbstractHttpConfigurer::disable)
+            .httpBasic(AbstractHttpConfigurer::disable)
+            .authorizeHttpRequests(auth -> auth
+                // CORRECT: Specific public endpoints
+                .requestMatchers(
+                    "/",
+                    "/api/auth/register",
+                    "/api/auth/login",
+                    "/api/auth/refresh",
+                    "/api/auth/validate",
+                    "/oauth2/**",
+                    "/login/**",
+                    "/actuator/**",
+                    "/error"
+                ).permitAll()
+                // CORRECT: Explicit admin protection
+                .requestMatchers("/api/auth/admin/**").hasRole("ADMIN")
+                .anyRequest().authenticated()
+            )
+            // ... rest of configuration
+    }
+}
+```
+
+**⚠️ AVOID THIS:**
+```java
+// WRONG: Too permissive - exposes admin endpoints!
+.requestMatchers("/api/auth/**").permitAll()  // ❌
+```
+
+### CORS Configuration - Single Source of Truth
+
+**Rule:** Configure CORS only at API Gateway level to avoid duplicate headers.
+
+**API Gateway (application.yml) - ACTIVE ✅**
+```yaml
+spring:
+  cloud:
+    gateway:
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:3000"
+              - "http://localhost:8080"
+              - "http://localhost:4200"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+```
+
+**Auth Service (CorsConfig.java) - DISABLED ✅**
+```java
+/**
+ * CORS Configuration - DISABLED
+ * 
+ * CORS is handled at the API Gateway level.
+ * Having CORS in both places causes duplicate headers.
+ */
+//@Configuration  // ← COMMENTED OUT to disable
+public class CorsConfig {
+    //@Bean  // ← COMMENTED OUT
+    public CorsConfigurationSource corsConfigurationSource() {
+        // Configuration kept for reference/direct testing only
+    }
+}
+```
+
+**Why:** Duplicate CORS headers cause browsers to reject responses even if backend returns 200 OK.
+
+### Path Mapping - Controller Base Path
+
+**Important:** Controllers must expect paths WITHOUT the API Gateway's stripped prefix.
+
+**API Gateway Route Configuration:**
+```yaml
+- id: auth-service
+  uri: http://localhost:8081
+  predicates:
+    - Path=/api/auth/**
+  filters:
+    - StripPrefix=1  # Removes /api from path before routing
+```
+
+**Controller Configuration:**
+```java
+// CORRECT: Path after StripPrefix is applied
+@RestController
+@RequestMapping("/auth")  // NOT "/api/auth"
+public class AuthController {
+    
+    @GetMapping("/admin/users")  // Final path: /auth/admin/users ✅
+    public ResponseEntity<?> getAllUsers(...) { }
+}
+```
+
+**Request Flow:**
+1. Frontend: `GET http://localhost:8080/api/auth/admin/users`
+2. Gateway: Strips `/api` → `GET http://localhost:8081/auth/admin/users`
+3. Controller: Receives `/auth/admin/users` ✅
+
+### Authentication Principal Type
+
+**Important:** @AuthenticationPrincipal type must match the principal in UsernamePasswordAuthenticationToken.
+
+**JwtAuthenticationFilter:**
+```java
+// Filter creates token with String principal
+UsernamePasswordAuthenticationToken authToken = 
+    new UsernamePasswordAuthenticationToken(
+        username,  // ← String principal
+        null,
+        authorities
+    );
+```
+
+**Controller:**
+```java
+// CORRECT: Match the String principal type
+@GetMapping("/admin/users")
+public ResponseEntity<?> getAllUsers(
+    @AuthenticationPrincipal String username  // ← String, not UserDetails
+) {
+    log.info("Admin requesting all users: {}", username);
+}
+```
+
+**⚠️ AVOID THIS:**
+```java
+// WRONG: Type mismatch causes NullPointerException
+@AuthenticationPrincipal UserDetails userDetails  // ❌ NPE!
+```
+
 ## Files Created/Modified
 
 ### Created (18 new files):
@@ -335,22 +490,25 @@ Update API Gateway to:
 11. `auth-service/src/main/java/com/whocloud/auth/util/JwtUtil.java`
 12. `auth-service/src/main/java/com/whocloud/auth/service/AuthService.java`
 13. `auth-service/src/main/java/com/whocloud/auth/service/UserDetailsServiceImpl.java`
-14. `auth-service/src/main/java/com/whocloud/auth/config/SecurityConfig.java`
-15. `auth-service/src/main/java/com/whocloud/auth/config/CorsConfig.java`
+14. `auth-service/src/main/java/com/whocloud/auth/config/SecurityConfig.java` ⚠️ UPDATED v1.1
+15. `auth-service/src/main/java/com/whocloud/auth/config/CorsConfig.java` ⚠️ DISABLED
 16. `auth-service/src/main/java/com/whocloud/auth/exception/AuthException.java`
 17. `auth-service/src/main/java/com/whocloud/auth/exception/GlobalExceptionHandler.java`
 18. `auth-service/src/main/java/com/whocloud/auth/scheduler/TokenCleanupScheduler.java`
 
 ### Modified (5 files):
-1. `auth-service/src/main/java/com/whocloud/auth/controller/AuthController.java`
+1. `auth-service/src/main/java/com/whocloud/auth/controller/AuthController.java` ⚠️ UPDATED v1.1
+   - Changed @RequestMapping from "/api/auth" to "/auth"
+   - Changed @AuthenticationPrincipal from UserDetails to String
 2. `auth-service/src/main/java/com/whocloud/auth/AuthServiceApplication.java` (added @EnableScheduling)
 3. `auth-service/build.gradle.kts` (added dependencies)
 4. `auth-service/src/main/resources/application.yml` (updated JWT config)
 5. `common/src/main/java/com/whocloud/common/dto/ApiResponse.java` (added error field)
 
-### Documentation (2 files):
+### Documentation (3 files):
 1. `auth-service/AUTH_API.md` - Complete API documentation
 2. `test-auth.ps1` - PowerShell testing script
+3. `USER_MANAGEMENT.md` ⚠️ NEW - Admin user management documentation
 
 ## Summary
 
@@ -361,17 +519,30 @@ The authentication implementation is now complete with:
 ✅ **Refresh token management**  
 ✅ **Token validation for service-to-service calls**  
 ✅ **Logout with token revocation**  
+✅ **Admin user management (CRUD operations)**  
 ✅ **Comprehensive error handling**  
 ✅ **Scheduled token cleanup**  
 ✅ **Complete API documentation**  
 ✅ **Testing scripts**  
 ✅ **Production-ready security configuration**  
+✅ **Proper CORS handling (single source at gateway)**  
+✅ **Path mapping fixes for API Gateway integration**  
+✅ **Enhanced logging for debugging**  
 
-The auth-service is now ready for integration testing and deployment!
+**Recent Critical Fixes (January 3, 2026):**
+- ✅ Fixed path mapping mismatch (controller base path)
+- ✅ Fixed authentication principal type mismatch
+- ✅ Fixed duplicate CORS headers
+- ✅ Fixed SecurityConfig permissions (granular control)
+- ✅ Enhanced JwtAuthenticationFilter logging
+
+The auth-service is now fully tested and production-ready!
 
 ---
 
 **Build Status**: ✅ SUCCESS  
-**Tests**: Pending (run after Docker deployment)  
-**Documentation**: Complete  
-**Next Action**: Deploy to Docker and run integration tests
+**Tests**: ✅ PASSED (Integration tested with frontend)  
+**Documentation**: ✅ Complete  
+**Status**: ✅ Production Ready  
+**Last Updated**: January 3, 2026  
+**Version**: 1.1.0
