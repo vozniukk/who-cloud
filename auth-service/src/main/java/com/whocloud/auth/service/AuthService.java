@@ -208,4 +208,24 @@ public class AuthService {
         log.info("Cleaning up expired refresh tokens");
         refreshTokenRepository.deleteExpiredTokens(LocalDateTime.now());
     }
+
+    public UserInfoResponse getUserInfo(String username) {
+        log.debug("Getting user info for: {}", username);
+        
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+        
+        return UserInfoResponse.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .role(user.getRole().name())
+                .googleId(user.getGoogleId())
+                .emailVerified(user.getGoogleId() != null) // If has Google ID, email is verified
+                .createdAt(user.getCreatedAt())
+                .lastLogin(user.getLastLogin())
+                .provider(user.getGoogleId() != null ? "Google" : "Local")
+                .build();
+    }
 }

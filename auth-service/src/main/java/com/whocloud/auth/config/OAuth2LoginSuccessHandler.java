@@ -82,91 +82,12 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         
         log.info("OAuth2 login completed successfully for user: {}", user.getUsername());
         
-        // For browser-based OAuth2 flow, redirect to a success page with tokens
-        // Option 1: Return HTML page with token (for demo/testing)
-        response.setContentType("text/html;charset=UTF-8");
-        response.setStatus(HttpServletResponse.SC_OK);
+        // Redirect to frontend with token in URL parameter
+        // Frontend will extract token and save it in localStorage + cookie
+        String frontendUrl = "http://localhost:3000/auth/callback?token=" + accessToken;
         
-        String html = """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Login Successful</title>
-                <style>
-                    body { font-family: Arial, sans-serif; margin: 50px; background: #f5f5f5; }
-                    .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 800px; margin: 0 auto; }
-                    h1 { color: #4CAF50; }
-                    .token-box { background: #f9f9f9; padding: 15px; border: 1px solid #ddd; border-radius: 4px; margin: 15px 0; overflow-wrap: break-word; }
-                    .label { font-weight: bold; color: #333; margin-top: 15px; }
-                    .user-info { background: #e3f2fd; padding: 15px; border-radius: 4px; margin: 15px 0; }
-                    .role-badge { display: inline-block; padding: 5px 10px; background: #ff9800; color: white; border-radius: 4px; font-weight: bold; }
-                    .copy-btn { background: #2196F3; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; }
-                    .copy-btn:hover { background: #1976D2; }
-                    code { font-family: 'Courier New', monospace; font-size: 12px; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h1>✓ Authentication Successful!</h1>
-                    
-                    <div class="user-info">
-                        <div class="label">User Information:</div>
-                        <p><strong>Username:</strong> %s</p>
-                        <p><strong>Email:</strong> %s</p>
-                        <p><strong>Full Name:</strong> %s</p>
-                        <p><strong>Role:</strong> <span class="role-badge">%s</span></p>
-                    </div>
-                    
-                    <div class="label">Access Token (JWT):</div>
-                    <div class="token-box">
-                        <code id="accessToken">%s</code>
-                        <button class="copy-btn" onclick="copyToken('accessToken')">Copy Access Token</button>
-                    </div>
-                    
-                    <div class="label">Refresh Token:</div>
-                    <div class="token-box">
-                        <code id="refreshToken">%s</code>
-                        <button class="copy-btn" onclick="copyToken('refreshToken')">Copy Refresh Token</button>
-                    </div>
-                    
-                    <div class="label">Token Type:</div>
-                    <p>Bearer</p>
-                    
-                    <div class="label">Expires In:</div>
-                    <p>24 hours (86400000 ms)</p>
-                    
-                    <div class="label">Next Steps:</div>
-                    <p>1. Copy the Access Token above</p>
-                    <p>2. Test GUEST access to information-service-a:</p>
-                    <div class="token-box">
-                        <code>curl http://localhost:8080/api/info-a/ -H "Authorization: Bearer YOUR_TOKEN"</code>
-                    </div>
-                    <p>3. Try accessing business-service-1 (should fail with 403 - GUEST role insufficient):</p>
-                    <div class="token-box">
-                        <code>curl http://localhost:8080/api/business-1/ -H "Authorization: Bearer YOUR_TOKEN"</code>
-                    </div>
-                </div>
-                
-                <script>
-                    function copyToken(elementId) {
-                        const tokenText = document.getElementById(elementId).textContent;
-                        navigator.clipboard.writeText(tokenText).then(() => {
-                            alert('Token copied to clipboard!');
-                        });
-                    }
-                </script>
-            </body>
-            </html>
-            """.formatted(
-                user.getUsername(),
-                user.getEmail(),
-                user.getFullName() != null ? user.getFullName() : "N/A",
-                user.getRole().name(),
-                accessToken,
-                refreshToken
-            );
-        
-        response.getWriter().write(html);
+        log.debug("Redirecting to frontend: {}", frontendUrl);
+        response.sendRedirect(frontendUrl);
     }
     
     /**

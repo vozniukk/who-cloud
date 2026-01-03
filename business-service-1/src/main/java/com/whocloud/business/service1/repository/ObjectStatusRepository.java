@@ -1,0 +1,15 @@
+package com.whocloud.business.service1.repository;
+
+import com.whocloud.business.service1.entity.ObjectStatus;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
+
+@Repository
+public interface ObjectStatusRepository extends JpaRepository<ObjectStatus, Long> {
+    
+    Optional<ObjectStatus> findByName(String name);
+    
+    boolean existsByName(String name);
+}

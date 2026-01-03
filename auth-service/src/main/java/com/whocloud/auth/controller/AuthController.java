@@ -67,4 +67,12 @@ public class AuthController {
         log.debug("Get current user request");
         return ResponseEntity.ok(ApiResponse.success(userDetails));
     }
+
+    @GetMapping("/user-info")
+    public ResponseEntity<ApiResponse<UserInfoResponse>> getUserInfo(@AuthenticationPrincipal UserDetails userDetails) {
+        log.debug("Get user info request for: {}", userDetails.getUsername());
+        
+        UserInfoResponse userInfo = authService.getUserInfo(userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success(userInfo));
+    }
 }

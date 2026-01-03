@@ -131,6 +131,15 @@ services:
       context: .
       dockerfile: business-service-1/Dockerfile
     container_name: whocloud-business-1
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=whocloud
+      - DB_USER=whocloud
+      - DB_PASSWORD=whocloud123
+      - JWT_SECRET=your-256-bit-secret-key-change-this-in-production
+    depends_on:
+      - postgres
     ports:
       - "8085:8085"
     networks:

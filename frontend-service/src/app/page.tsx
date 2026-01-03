@@ -1,5 +1,6 @@
 import { getDatabaseStats } from '@/services/api';
 import { DatabaseStats } from '@/types/database';
+import Link from 'next/link';
 
 export default async function Home() {
   let stats: DatabaseStats | null = null;
@@ -24,10 +25,10 @@ export default async function Home() {
               </h1>
             </div>
             <nav className="flex gap-6">
-              <a href="/" className="text-gray-700 hover:text-purple-600 font-medium transition">Home</a>
-              <a href="/api/public/welcome" className="text-gray-700 hover:text-purple-600 font-medium transition">API</a>
-              <a href="/login/oauth2/authorization/google" className="bg-gradient-to-r from-purple-600 to-blue-500 text-white px-4 py-2 rounded-lg hover:shadow-lg transition">
-                Sign In
+              <Link href="/" className="text-gray-700 hover:text-purple-600 font-medium transition">Home</Link>
+              <Link href="/api/public/welcome" className="text-gray-700 hover:text-purple-600 font-medium transition">API</Link>
+              <a href="/login/oauth2/authorization/google" className="bg-gradient-to-r from-purple-600 to-blue-500 text-white px-6 py-3 rounded-lg hover:shadow-lg transition font-semibold">
+                🔐 Sign In with Google
               </a>
             </nav>
           </div>
